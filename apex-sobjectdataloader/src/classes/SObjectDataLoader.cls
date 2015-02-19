@@ -2,22 +2,22 @@
  * Copyright (c) 2012, Andrew Fawcett
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without modification, 
+ * Redistribution and use in source and binary forms, with or without modification,
  *   are permitted provided that the following conditions are met:
  *
- * - Redistributions of source code must retain the above copyright notice, 
+ * - Redistributions of source code must retain the above copyright notice,
  *      this list of conditions and the following disclaimer.
- * - Redistributions in binary form must reproduce the above copyright notice, 
- *      this list of conditions and the following disclaimer in the documentation 
+ * - Redistributions in binary form must reproduce the above copyright notice,
+ *      this list of conditions and the following disclaimer in the documentation
  *      and/or other materials provided with the distribution.
- * - Neither the name of the Andrew Fawcett, inc nor the names of its contributors 
- *      may be used to endorse or promote products derived from this software without 
+ * - Neither the name of the Andrew Fawcett, inc nor the names of its contributors
+ *      may be used to endorse or promote products derived from this software without
  *      specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
- *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES 
- *  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL 
- *  THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ *  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+ *  THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  *  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  *  OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  *  OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
@@ -30,10 +30,10 @@
  *   See https://github.com/afawcett/apex-sobjectdataloader for known issues, restrictions and TODO's
  *
  **/
-public with sharing class SObjectDataLoader 
+public with sharing class SObjectDataLoader
 {
 	/**
-	 * Configuration uses a Fluent method design (http://en.wikipedia.org/wiki/Fluent_interface), 
+	 * Configuration uses a Fluent method design (http://en.wikipedia.org/wiki/Fluent_interface),
 	 **/
 	public class SerializeConfig
 	{
@@ -41,15 +41,15 @@ public with sharing class SObjectDataLoader
 		protected Set<Schema.SObjectField> followChildRelationships;
 		protected Set<Schema.SObjectField> omitFields;
         protected Map<Schema.SObjectType, Map<String, Schema.SObjectField>> objectFieldDescribeMap;
-		
+
 		public SerializeConfig()
-		{	
+		{
 			followRelationships = new Set<Schema.SObjectField>();
 			followChildRelationships = new Set<Schema.SObjectField>();
-			omitFields = new Set<Schema.SObjectField>(); 			
+			omitFields = new Set<Schema.SObjectField>();
 			objectFieldDescribeMap = new Map<Schema.SObjectType, Map<String, Schema.SObjectField>>();
 		}
-		
+
 		/**
 		 * Provide a field that represents the lookup relationship the serializer should follow
 		 **/
@@ -58,7 +58,7 @@ public with sharing class SObjectDataLoader
 			followRelationships.add(relationshipField);
 			return this;
 		}
-		
+
 		/**
 		 * Provide a field that represents a parent child relationship the serializer should follow
 		 **/
@@ -67,7 +67,7 @@ public with sharing class SObjectDataLoader
 			followChildRelationships.add(relationshipField);
 			return this;
 		}
-		
+
 		/**
 		 * Provide a field that the serializer should omit from the serialized output
 		 **/
@@ -80,10 +80,10 @@ public with sharing class SObjectDataLoader
 				followChildRelationships.remove(omitField);
 			return this;
 		}
-		
-		/** 
+
+		/**
 		 * Automatically configure (removes all previous configuration)
-		 *  Skip known system lookup and child relationships but include the rest (direct children only) upto certain depth, 
+		 *  Skip known system lookup and child relationships but include the rest (direct children only) upto certain depth,
 		 *  Caller can always add or omit specific via follow or omit methods
 		 **/
 		public SerializeConfig auto(Schema.SObjectType sObjectType)
@@ -92,21 +92,21 @@ public with sharing class SObjectDataLoader
 			followChildRelationships = new Set<Schema.SObjectField>();
 			omitFields = new Set<Schema.SObjectField>();
 			Set<Schema.SObjectType> searched = new Set<Schema.SObjectType>();
-			searchRelationships(sObjectType, 0, 0, true, searched);	
-			return this;	
+			searchRelationships(sObjectType, 0, 0, true, searched);
+			return this;
 		}
-		
+
 		/**
 		 * Seek out recursively relationships
 		 **/
 		private void searchRelationships(Schema.SObjectType sObjectType, Integer lookupDepth, Integer childDepth, Boolean searchChildren, Set<Schema.SObjectType> searched)
-		{		
-			// Stop infinite recursion	
+		{
+			// Stop infinite recursion
 			if(searched.contains(sObjectType) || lookupDepth > 2 || childDepth > 3) // TODO: Make max depth configurable
 				return;
 			searched.add(sObjectType);
 			Schema.DescribeSObjectResult sObjectDescribe = sObjectType.getDescribe();
-						
+
 			// Following children? (only set for descendents of the top level object)
 			if(searchChildren)
 			{
@@ -116,7 +116,7 @@ public with sharing class SObjectDataLoader
 				{
 					// Determine which child relationships to automatically follow
 					String childRelationshipName = childRelationship.getRelationshipName();
-					if(childRelationshipName==null || 
+					if(childRelationshipName==null ||
 					   childRelationshipWhitelist.contains(childRelationshipName)) // Skip relationships without names and those whitelisted
 						continue;
 					if(childRelationshipName.endsWith('Histories')) // Skip relationships ending in Histories (TODO: consider a RegEx approach?)
@@ -127,7 +127,7 @@ public with sharing class SObjectDataLoader
 						searchRelationships(childRelationship.getChildSObject(), lookupDepth, childDepth+1, true, searched);
 				}
 			}
-							
+
 			// Follow lookup relationships to long as they have not previously been added as child references and are not whitelisted
 			//throw new ConsultingToolException('Error in SobjectDataLoader');
 			Map<String, Schema.SObjectField> sObjectFields = objectFieldDescribeMap.get(sObjectType);
@@ -136,8 +136,8 @@ public with sharing class SObjectDataLoader
 				sObjectFields = sObjectDescribe.fields.getMap();
 				objectFieldDescribeMap.put(sObjectType, sObjectFields);
 			}
-			
-			//If the Sobject Field is referenceTo as 'User' and 'Organization' then restrict it to search its Relationships 
+
+			//If the Sobject Field is referenceTo as 'User' and 'Organization' then restrict it to search its Relationships
 			for(Schema.SObjectField sObjectField : sObjectFields.values())
 				if(sObjectField.getDescribe().getType() == Schema.DisplayType.Reference)
 				{
@@ -158,7 +158,7 @@ public with sharing class SObjectDataLoader
 		}
 
 		// Standard fields that are not included when using the auto config
-		private Set<String> relationshipWhitelist = 
+		private Set<String> relationshipWhitelist =
 			new Set<String>
 				{ 'OwnerId',
 				  'CreatedById',
@@ -166,33 +166,36 @@ public with sharing class SObjectDataLoader
 				  'RecordTypeId',
 				  'ProfileId'
 				};
-				
+
 		// Standard child relationships that are not included when using the auto config
-		private Set<String> childRelationshipWhitelist = 
-			new Set<String> 
-				{ 'Shares', 
-				  'ProcessInstances', 
-				  'ProcessSteps', 
-				  'Tasks', 
-				  'ActivityHistories', 
-				  'Attachments', 
-				  'FeedSubscriptionsForEntity', 
-				  'Events', 
-				  'Notes', 
-				  'NotesAndAttachments', 
-				  'OpenActivities', 
-				  'Histories', 
-				  'Feeds'};		
-	
-		// Standard RefernceTo that are not included when using the auto config	
-		private Set<String> referenceToWhitelist = 
+		private Set<String> childRelationshipWhitelist =
+			new Set<String>
+				{ 'Shares',
+				  'ProcessInstances',
+				  'ProcessSteps',
+				  'Tasks',
+				  'ActivityHistories',
+				  'Attachments',
+				  'FeedSubscriptionsForEntity',
+				  'Events',
+				  'Notes',
+				  'NotesAndAttachments',
+				  'OpenActivities',
+				  'Histories',
+				  'Feeds',
+                  'RecordAssociatedGroups',
+                  'CombinedAttachments',
+                  'AttachedContentDocuments'};
+
+		// Standard RefernceTo that are not included when using the auto config
+		private Set<String> referenceToWhitelist =
 			new Set<String>
 				{ 'User',
 				  'Organization'
 				};
-    
+
         // Standard fiels to be omitted
-        private Set<String> fieldWhitelist = 
+        private Set<String> fieldWhitelist =
             new Set<String>
                 {
                 	'LastViewedDate',
@@ -204,10 +207,10 @@ public with sharing class SObjectDataLoader
                 	'ShippingAddress',
                 	'Address'
                 };
-				
+
 	}
-	
-	
+
+
 	/**
 	 * Serialize the given records using the default configuration (see SerializeConfig.auto)
 	 **/
@@ -216,10 +219,10 @@ public with sharing class SObjectDataLoader
 		// Serialize based on no prior knowledge of the objects
 		if(ids==null || ids.size()==0)
 			throw new SerializerException('List of Ids cannot be null or empty.');
-		
-		//Map Containing strategy By SObjectType of Ids	
+
+		//Map Containing strategy By SObjectType of Ids
 		Map <Schema.SObjectType,SerializeConfig> strategyBySObjectType = new Map <Schema.SObjectType,SerializeConfig>();
-	
+
 		for(Id idRecord : ids)
 		{
 			Schema.SObjectType sObjectType = idRecord.getSObjectType();
@@ -228,10 +231,10 @@ public with sharing class SObjectDataLoader
 				strategyBySObjectType.put(sObjectType,new SerializeConfig().auto(idRecord.getSObjectType()));
 			}
 		}
-		
+
 		return serialize(ids,strategyBySObjectType);
 	}
-	
+
 	/**
 	 * Serialize the given records using the given configuration
 	 **/
@@ -244,18 +247,18 @@ public with sharing class SObjectDataLoader
 	 * Serialize the given records using the given configurationMap
 	 **/
 	public static String serialize(Set<Id> ids, Map <Schema.SObjectType,SerializeConfig> strategyBySObjectType)
-	{			
+	{
 		// Validate parameters
 		if(ids==null || ids.size()==0)
 			throw new SerializerException('List of Ids cannot be null or empty.');
-			
-		// Container to bundle record sets into 
+
+		// Container to bundle record sets into
 		RecordsBundle recordsToBundle = new RecordsBundle();
-		recordsToBundle.recordSetBundles = new List<RecordSetBundle>();		
+		recordsToBundle.recordSetBundles = new List<RecordSetBundle>();
 		recordsToBundle.recordSetBundlesByType = new Map<String, RecordSetBundle>();
-		
+
 		// Begin recursive serialize from given records through to related records
-		
+
 		//Map containing Key as SObjectType and Value as set of Id's having same SObjectType as key
 		Map <Schema.SObjectType,Set<Id>> recordMapToSerialize = new Map <Schema.SObjectType,Set<Id>>();
 		for(Id idRecord : ids)
@@ -272,14 +275,14 @@ public with sharing class SObjectDataLoader
 				recordMapToSerialize.put(sObjectType,idSet);
 			}
 		}
-		
+
 		Set<Schema.SObjectType> sObjectTypeSet = recordMapToSerialize.keySet();
 		for(Schema.SObjectType sobjectTypes : sObjectTypeSet)
 		{
 			serialize(recordMapToSerialize.get(sobjectTypes), sobjectTypes, null, strategyBySObjectType.get(sobjectTypes), 0, 0, recordsToBundle);
-		}		
-		// Serialise the records bundle container		
-		return JSON.serialize(recordsToBundle);		 		
+		}
+		// Serialise the records bundle container
+		return JSON.serialize(recordsToBundle);
 	}
 
 	/**
@@ -289,22 +292,22 @@ public with sharing class SObjectDataLoader
 	{
 		return deserialize(recordsBundleAsJSON, null);
 	}
-		
+
 	/**
 	 * Deserialize the given JSON record set bundle utilising the given callback
 	 **/
 	public static Set<Id> deserialize(String recordsBundleAsJSON, IDeserializeCallback callback)
 	{
 		// Desearialise the records bundle
-		RecordsBundle recordsBundle = (RecordsBundle) 
+		RecordsBundle recordsBundle = (RecordsBundle)
 			JSON.deserialize(recordsBundleAsJSON, SObjectDataLoader.RecordsBundle.class);
-		
+
 		// Map to track original ID's against the new SObject record instances being inserted
 		Map<Id, SObject> recordsByOriginalId = new Map<Id, SObject>();
-		
+
 		// Record set bundles are already ordered in dependency order due to serialisation approach
 		Map<String, Schema.SObjectType> sObjectsByType = Schema.getGlobalDescribe();
-		List<UnresolvedReferences> unresolvedReferencesByRecord = new List<UnresolvedReferences>(); 
+		List<UnresolvedReferences> unresolvedReferencesByRecord = new List<UnresolvedReferences>();
 		for(RecordSetBundle recordSetBundle : recordsBundle.recordSetBundles)
 		{
 			// List of records to be inserted after de-serialization
@@ -314,22 +317,22 @@ public with sharing class SObjectDataLoader
 			Map<String, Schema.SObjectField> sObjectFields;
 			sObjectFields = sObjectType.getDescribe().fields.getMap();
 			List<Schema.SObjectField> relationshipsFields = new List<Schema.SObjectField>();
-			//adding selfrefernce Fields in set 
+			//adding selfrefernce Fields in set
 			Set<String> selfReferenceFields = new Set<String>();
 			// Unresolved refrences list for callback
-			List<UnresolvedReferences> callbackUnresolvedReferencesList= new List<UnresolvedReferences>(); 
+			List<UnresolvedReferences> callbackUnresolvedReferencesList= new List<UnresolvedReferences>();
 			for(Schema.SObjectField sObjectField : sObjectFields.values())
 			{
-				if(sObjectField.getDescribe().getType() == Schema.DisplayType.Reference) 
-					relationshipsFields.add(sObjectField);					
+				if(sObjectField.getDescribe().getType() == Schema.DisplayType.Reference)
+					relationshipsFields.add(sObjectField);
 					for(Schema.sObjectType refernceToType : sObjectField.getDescribe().getReferenceTo())
-					{					
+					{
 					 	if(refernceToType.getDescribe().getName().equals(sObjectType.getDescribe().getName()))
 					 	{
 					 		selfReferenceFields.add(sObjectField.getDescribe().getName());
 					 	}
 					}
-					
+
 			}
 			// Prepare records for insert
 			for(SObject orignalRecord : recordSetBundle.Records)
@@ -342,7 +345,7 @@ public with sharing class SObjectDataLoader
                 	if(relationshipsFields.size()>0)
                 	{
                     	Set<Schema.SObjectField> filteredUnresolvedFieldReferences = new Set<Schema.SObjectField>();
-                    	Set<Schema.SObjectField> allUnresolvedFieldReferences = new Set<Schema.SObjectField>(); 
+                    	Set<Schema.SObjectField> allUnresolvedFieldReferences = new Set<Schema.SObjectField>();
                     	updateReferenceFieldsInRecords(relationshipsFields,filteredUnresolvedFieldReferences,recordsByOriginalId,orignalRecord,allUnresolvedFieldReferences);
                     // Retain a list of records with unresolved references
                     	if(allUnresolvedFieldReferences.size()>0)
@@ -365,14 +368,14 @@ public with sharing class SObjectDataLoader
                     	if(filteredUnresolvedFieldReferences.isEmpty() && callback==null)
                     	{
                         	recordsToInsert.add(newRecord);
-                    	}   
+                    	}
                 	}
                 	else
                 	{
                     	recordsToInsert.add(newRecord);
                 	}
 				}
-            }           
+            }
 			List<UnresolvedReferences> newUnResolvedReferenceList = new List<UnresolvedReferences>();
             // Let the caller attempt to resolve any references the above could not
             if(callback!=null && callbackUnresolvedReferencesList.size()>0)
@@ -383,7 +386,7 @@ public with sharing class SObjectDataLoader
                 		recordsToInsert.add(callBackUnresolvedReference.Record);
                 }
             }
-           
+
             insert recordsToInsert;
             recordSetBundle.Records = recordsToInsert;
           	processUnresolvedRecords(unresolvedReferencesByRecord, recordsByOriginalId);
@@ -400,14 +403,14 @@ public with sharing class SObjectDataLoader
         // Return Id list from the first bundle set
         return new Map<Id, SObject>(recordsBundle.recordSetBundles[0].Records).keySet();
     }
-	
+
 	/*
     *  Method to Update foreign key references / lookups / master-detail relationships
     */
     private static void updateReferenceFieldsInRecords(List<Schema.SObjectField> relationshipsFields,Set<Schema.SObjectField> filteredUnresolvedFieldReferences,Map<Id, SObject> recordsByOriginalId,Sobject orignalRecord,Set<Schema.SObjectField> allUnresolvedFieldReferences)
     {
     	for(Schema.SObjectField sObjectField : relationshipsFields)
-		{                           
+		{
 			// Obtained original related record Id and search map over new records by old Ids
 			Id oldRelatedRecordId = (Id) orignalRecord.get(sObjectField);
 			if(oldRelatedRecordId!=null )
@@ -440,8 +443,8 @@ public with sharing class SObjectDataLoader
     */
     private static void  processUnresolvedRecords(List<UnresolvedReferences> unresolvedReferencesByRecord,Map<Id, SObject> recordsByOriginalId)
     {
-    
-   		List<UnresolvedReferences> unresolvedReferences = new List<UnresolvedReferences>(); 
+
+   		List<UnresolvedReferences> unresolvedReferences = new List<UnresolvedReferences>();
    		Integer recordsSize = unresolvedReferencesByRecord.size();
         if(recordsSize >0)
         {
@@ -470,25 +473,25 @@ public with sharing class SObjectDataLoader
             {
                 insert insertResolvedRecords;
                 processUnresolvedRecords(unresolvedReferencesByRecord,recordsByOriginalId);
-            }       
+            }
         }
     }
 
 	private static void serialize(Set<ID> ids, Schema.SObjectType sObjectType, Schema.SObjectField queryByIdField, SerializeConfig config, Integer lookupDepth, Integer childDepth, RecordsBundle recordsToBundle)
-	{		
+	{
 		// Config?
 		if(config==null)
 			throw new SerializerException('Must pass a valid SerializeConfig instance.');
 		// Stop infinite recursion
 		if(lookupDepth > 3 || childDepth > 3) // TODO: Make max depth configurable
 			return;
-			
+
 		// Describe object and determine fields to serialize
 		Schema.DescribeSObjectResult sObjectDesc = sObjectType.getDescribe();
-		
+
 		//updating so that the we dont query for objects that cannot be queried:-
 		if(!sObjectDesc.queryable || !sObjectDesc.isCreateable()) return;
-		
+
 		Map<String, Schema.SObjectField> sObjectFields = config.objectFieldDescribeMap.get(sObjectType);
 		if (sObjectFields == null)
 		{
@@ -496,26 +499,26 @@ public with sharing class SObjectDataLoader
 			config.objectFieldDescribeMap.put(sObjectType, sObjectFields);
 		}
 		List<Schema.SObjectField> sObjectFieldsToSerialize = listFieldsToSerialize(sObjectFields, config);
-						
+
 		// Query records to serialize
 		String fieldList = null;
 		for(Schema.SObjectField sObjectField : sObjectFieldsToSerialize)
 			fieldList = fieldList == null ? sObjectField.getDescribe().getName() : fieldList + ',' + sObjectField.getDescribe().getName();
-		String query = String.format('select {0} from {1} where {2} in :ids order by {2}', 
+		String query = String.format('select {0} from {1} where {2} in :ids order by {2}',
 			new List<String> { fieldList, sObjectDesc.getName(), queryByIdField == null ? 'id' : queryByIdField.getDescribe().getName(), 'Name' });
 		Map<Id, SObject> recordsToSerializeById = new Map<Id, SObject>(Database.query(query));
 		if(recordsToSerializeById.size()==0)
 			return;
-		
+
 		// Any lookup relationships to folow?
 		Set<Schema.SObjectField> sObjectFollowRelationships = config.followRelationships.clone();
 		sObjectFollowRelationships.retainAll(sObjectFields.values());
 		if(sObjectFollowRelationships.size()>0)
-		{				
+		{
 			// Build list of ID's for each related record
-			Map<Schema.DescribeFieldResult, Set<Id>> relationshipsByField = new Map<Schema.DescribeFieldResult, Set<Id>>(); 
+			Map<Schema.DescribeFieldResult, Set<Id>> relationshipsByField = new Map<Schema.DescribeFieldResult, Set<Id>>();
 			for(Schema.SObjectField sObjectField : sObjectFollowRelationships)
-				relationShipsByField.put(sObjectField.getDescribe(), new Set<Id>() );			
+				relationShipsByField.put(sObjectField.getDescribe(), new Set<Id>() );
 			for(SObject recordToSerialize : recordsToSerializeById.values())
 			{
 				for(Schema.DescribeFieldResult relationshipField : relationshipsByField.keySet())
@@ -530,10 +533,10 @@ public with sharing class SObjectDataLoader
 			{
 				Set<Id> relatedRecordIds = relationshipsByField.get(relationshipField);
 				if(relatedRecordIds.size()>0)
-					serialize(relatedRecordIds, relationshipField.getReferenceTo()[0], null, config, lookupDepth+1, childDepth, recordsToBundle);					
+					serialize(relatedRecordIds, relationshipField.getReferenceTo()[0], null, config, lookupDepth+1, childDepth, recordsToBundle);
 			}
 		}
-					
+
 		// Add records to applicable record set bundle
 		RecordSetBundle recordSetBundle = recordsToBundle.recordSetBundlesByType.get(sObjectDesc.getName());
 		if(recordSetBundle!=null)
@@ -548,23 +551,23 @@ public with sharing class SObjectDataLoader
 			recordsToBundle.recordSetBundles.add(recordSetBundle);
 			recordsToBundle.recordSetBundlesByType.put(recordSetBundle.ObjectType, recordSetBundle);
 		}
-				
+
 		// Any child relationships to follow?
 		List<Schema.ChildRelationship> childRelationships;
 		childRelationships = sObjectDesc.getChildRelationships();
 		for(Schema.ChildRelationship childRelationship : childRelationships)
-		{ 
+		{
 			// Is this a child relationship we have been asked to follow?
 			Schema.SObjectType childSObjectType = childRelationship.getChildSObject();
 			if(config.followChildRelationships.contains(childRelationship.getField()))
 				serialize(recordsToSerializeById.keySet(), childSObjectType, childRelationship.getField(), config, lookupDepth, childDepth+1, recordsToBundle);
 		}
 	}
-	
+
 	private static List<Schema.SObjectField> listFieldsToSerialize(Map<String, Schema.SObjectField> sObjectFields, SerializeConfig config)
 	{
 		// Filter fields to serialise
-		List<Schema.SObjectField> serializeFields = new List<Schema.SObjectField>(); 
+		List<Schema.SObjectField> serializeFields = new List<Schema.SObjectField>();
 		List<String> fieldNames = new List<String>(sObjectFields.keySet());
 		fieldNames.sort();
 		for(String fieldName : fieldNames)
@@ -577,26 +580,26 @@ public with sharing class SObjectDataLoader
 			Schema.DescribeFieldResult sObjectFieldDescribe = sObjectField.getDescribe();
 			if(sObjectFieldDescribe.isAutoNumber() ||
 			   sObjectFieldDescribe.isCalculated())
-			   continue;	
+			   continue;
 			// Skip lookup fields not in either of the follow lists
 			if(sObjectFieldDescribe.getType() == Schema.DisplayType.Reference)
 				if(!(config.followRelationships.contains(sObjectField) ||
 				     config.followChildRelationships.contains(sObjectField)))
 				   continue;
-			// Serialize this field..						
+			// Serialize this field..
 			serializeFields.add(sObjectField);
-		}			
-		return serializeFields;	
+		}
+		return serializeFields;
 	}
-	
-	/** 
+
+	/**
 	 * General exception class
 	 **/
 	public class SerializerException extends Exception
 	{
-		
+
 	}
-	
+
 	/**
 	 * Callback used during deserialization
 	 **/
@@ -607,7 +610,7 @@ public with sharing class SObjectDataLoader
 		 **/
 		void unresolvedReferences(Schema.SObjectType sObjectType, List<UnresolvedReferences> unresolvedReferences);
 	}
-	
+
 	/**
 	 * Used during deserialization to allow caller to attempt to resolve references not resolved but required to insert records
 	 **/
@@ -616,18 +619,18 @@ public with sharing class SObjectDataLoader
 		public SObject Record;
 		public Set<Schema.SObjectField> References;
 	}
-	
+
 	/**
 	 * Internal Apex represnetation of the serialized output for all recordsets
 	 **/
 	private class RecordsBundle
 	{
 		// Order of bundle sets is important
-		public List<RecordSetBundle> RecordSetBundles;			
+		public List<RecordSetBundle> RecordSetBundles;
 		// Used by serialiser to group records by type during recursion
 		public transient Map<String, RecordSetBundle> RecordSetBundlesByType;
 	}
-	
+
 	/**
 	 * Internal Apex represnetation of the serialized output for a given recordset
 	 **/
@@ -635,7 +638,7 @@ public with sharing class SObjectDataLoader
 	{
 		// Groups records by type
 		public String ObjectType;
-		public List<SObject> Records;	
+		public List<SObject> Records;
 	}
-	
+
 }
